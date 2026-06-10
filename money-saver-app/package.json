@@ -1,0 +1,15 @@
+{
+  "name": "money-saver-app-sample",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"src/features/savings/__tests__/*.test.js\"",
+    "test:categories": "node --test src/features/savings/__tests__/savingsCategories.test.js",
+    "test:dates": "node --test src/features/savings/__tests__/dateRanges.test.js",
+    "test:summary": "node --test src/features/savings/__tests__/savingsSummary.test.js",
+    "test:history": "node --test src/features/savings/__tests__/savingsReducer.test.js src/features/savings/__tests__/SavingsHistory.test.js",
+    "test:storage": "node --test src/features/savings/__tests__/savingsStorage.test.js src/features/savings/__tests__/createSavingsStore.test.js"
+  }
+}
+

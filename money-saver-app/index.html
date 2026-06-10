@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Money Saver</title>
+    <link rel="stylesheet" href="./src/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Money Saver</p>
+          <h1>Track what you saved by not buying.</h1>
+          <p class="lede">Skip a coffee, rideshare, subscription, or impulse buy, then log the money you kept.</p>
+        </div>
+        <div class="total-card">
+          <span>Total saved</span>
+          <strong id="totalSaved">$0.00</strong>
+        </div>
+      </section>
+
+      <section class="grid">
+        <form id="entryForm" class="panel">
+          <h2>Add skipped purchase</h2>
+          <label>
+            Title
+            <input name="title" placeholder="Skipped Starbucks" required>
+          </label>
+          <label>
+            Amount saved
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="6.00" required>
+          </label>
+          <label>
+            Category
+            <select name="categoryId" id="categorySelect" required></select>
+          </label>
+          <label>
+            Date
+            <input name="date" type="date" required>
+          </label>
+          <label>
+            Note
+            <textarea name="note" placeholder="Why did you skip it?"></textarea>
+          </label>
+          <p id="formError" class="error" role="alert"></p>
+          <button type="submit">Save entry</button>
+        </form>
+
+        <section class="panel">
+          <h2>Dashboard</h2>
+          <div class="filters">
+            <button type="button" data-range="today">Today</button>
+            <button type="button" data-range="week">Week</button>
+            <button type="button" data-range="month">Month</button>
+            <button type="button" data-range="all">All</button>
+          </div>
+          <div id="summary"></div>
+          <div id="history"></div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
+
