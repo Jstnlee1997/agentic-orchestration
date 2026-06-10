@@ -7,13 +7,16 @@ import {
   completeGate,
   createOrchestration,
   formatState,
+  getAgentBrief,
   getAgentLanes,
   getBoardColumns,
   getDependencyEdges,
   getHealth,
+  getNextAction,
   getWorkItem,
   handoffWorkItem,
   retryWorkItem,
+  SKILL_META,
   transitionWorkItem
 } from "./orchestrationEngine.js";
 import { scenarios } from "./scenarios.js";
@@ -22,6 +25,7 @@ const app = document.querySelector("#app");
 let activeScenarioId = scenarios[0].id;
 let orchestration = createOrchestration(scenarios[0]);
 let activeView = "board";
+let activeBriefItemId = orchestration.workItems[0]?.id || null;
 
 render();
 
@@ -48,6 +52,10 @@ app.addEventListener("click", (event) => {
 
   if (action === "reset") {
     loadScenario(activeScenarioId);
+  }
+
+  if (action === "brief") {
+    activeBriefItemId = activeBriefItemId === itemId ? null : itemId;
   }
 
   if (action === "approve") {
@@ -112,6 +120,7 @@ function loadScenario(id) {
   const scenario = scenarios.find((candidate) => candidate.id === id) || scenarios[0];
   orchestration = createOrchestration(scenario);
   activeScenarioId = scenario.id;
+  activeBriefItemId = orchestration.workItems[0]?.id || null;
   render();
 }
 
@@ -359,8 +368,11 @@ function renderEvents() {
 
 function renderCard(item) {
   const completion = canCompleteWorkItem(orchestration, item.id);
+  const nextAction = getNextAction(orchestration, item.id);
   const role = ROLE_META[item.ownerRole] || { label: item.ownerRole, accent: "#64748b" };
+  const skill = SKILL_META[nextAction.recommendedSkill] || { label: nextAction.recommendedSkill };
   const artifactList = item.artifacts.map((artifactId) => orchestration.artifacts.find((artifact) => artifact.id === artifactId)).filter(Boolean);
+  const briefOpen = activeBriefItemId === item.id;
 
   return `
     <article class="work-card ${item.state}" style="--role:${role.accent}">
@@ -373,6 +385,10 @@ function renderCard(item) {
         ${item.dependencies.length ? `<span>${item.dependencies.length} deps</span>` : `<span>No deps</span>`}
         ${item.gates.length ? `<span>${item.gates.filter((gate) => gate.status !== "passed").length} gates open</span>` : `<span>No gates</span>`}
         ${item.retryCount ? `<span>${item.retryCount} retries</span>` : `<span>Fresh</span>`}
+      </div>
+      <div class="agent-guidance">
+        <span>Skill: ${escapeHtml(skill.label)}</span>
+        <strong>${escapeHtml(nextAction.recommendedAction)}</strong>
       </div>
       <ul class="criteria">
         ${item.acceptanceCriteria.slice(0, 3).map((criterion) => `<li>${escapeHtml(criterion)}</li>`).join("")}
@@ -388,6 +404,7 @@ function renderCard(item) {
         </div>
       ` : ""}
       ${completion.ok || item.state === STATES.DONE ? "" : `<p class="completion-warning">${escapeHtml(completion.reasons[0] || "")}</p>`}
+      ${briefOpen ? renderBriefPanel(item, nextAction) : ""}
       <div class="card-actions">
         ${renderActions(item)}
       </div>
@@ -396,14 +413,17 @@ function renderCard(item) {
 }
 
 function renderActions(item) {
+  const brief = `<button type="button" data-action="brief" data-item-id="${item.id}" class="ghost">${activeBriefItemId === item.id ? "Hide Brief" : "Brief"}</button>`;
   if (item.state === STATES.NEEDS_HUMAN_APPROVAL) {
     return `
+      ${brief}
       <button type="button" data-action="approve" data-item-id="${item.id}">Approve</button>
       <button type="button" data-action="handoff" data-item-id="${item.id}" class="ghost">Handoff</button>
     `;
   }
   if ([STATES.READY, STATES.INTAKE, STATES.DECOMPOSITION, STATES.ASSIGNMENT].includes(item.state)) {
     return `
+      ${brief}
       <button type="button" data-action="start" data-item-id="${item.id}">Start</button>
       <button type="button" data-action="block" data-item-id="${item.id}" class="ghost">Block</button>
       <button type="button" data-action="handoff" data-item-id="${item.id}" class="ghost">Handoff</button>
@@ -411,26 +431,53 @@ function renderActions(item) {
   }
   if (item.state === STATES.IN_PROGRESS) {
     return `
+      ${brief}
       <button type="button" data-action="review" data-item-id="${item.id}">Send to Review</button>
       <button type="button" data-action="block" data-item-id="${item.id}" class="ghost">Block</button>
     `;
   }
   if (item.state === STATES.NEEDS_REVIEW) {
     return `
+      ${brief}
       <button type="button" data-action="verify" data-item-id="${item.id}">Pass Review</button>
       <button type="button" data-action="handoff" data-item-id="${item.id}" class="ghost">Handoff</button>
     `;
   }
   if (item.state === STATES.VERIFYING) {
     return `
+      ${brief}
       <button type="button" data-action="done" data-item-id="${item.id}">Attach Evidence</button>
       <button type="button" data-action="block" data-item-id="${item.id}" class="ghost">Block</button>
     `;
   }
   if ([STATES.BLOCKED, STATES.FAILED_RECOVERY].includes(item.state)) {
-    return `<button type="button" data-action="retry" data-item-id="${item.id}">Retry</button>`;
+    return `
+      ${brief}
+      <button type="button" data-action="retry" data-item-id="${item.id}">Retry</button>
+    `;
   }
-  return `<button type="button" data-action="handoff" data-item-id="${item.id}" class="ghost">Handoff</button>`;
+  return `
+    ${brief}
+    <button type="button" data-action="handoff" data-item-id="${item.id}" class="ghost">Handoff</button>
+  `;
+}
+
+function renderBriefPanel(item, nextAction) {
+  return `
+    <section class="brief-panel" aria-label="Agent brief for ${escapeHtml(item.title)}">
+      <div class="brief-summary">
+        <span>Role: ${escapeHtml(ROLE_META[nextAction.recommendedRole]?.label || nextAction.recommendedRole)}</span>
+        <span>Allowed: ${nextAction.allowedTransitions.length ? nextAction.allowedTransitions.map(formatState).join(", ") : "blocked"}</span>
+        <span>Evidence: ${nextAction.requiredEvidence.length || 0}</span>
+      </div>
+      ${nextAction.blockers.length ? `
+        <div class="brief-blockers">
+          ${nextAction.blockers.map((blocker) => `<span>${escapeHtml(blocker)}</span>`).join("")}
+        </div>
+      ` : ""}
+      <pre>${escapeHtml(getAgentBrief(orchestration, item.id))}</pre>
+    </section>
+  `;
 }
 
 function readableType(type) {

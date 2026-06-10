@@ -320,6 +320,8 @@ h1 {
 .card-topline,
 .card-signals,
 .card-actions,
+.brief-summary,
+.brief-blockers,
 .gate-list,
 .artifact-list {
   display: flex;
@@ -336,6 +338,9 @@ h1 {
 .role-pill,
 .state-pill,
 .card-signals span,
+.agent-guidance span,
+.brief-summary span,
+.brief-blockers span,
 .gate-list span,
 .artifact-list span {
   border-radius: 999px;
@@ -351,7 +356,8 @@ h1 {
 }
 
 .state-pill,
-.card-signals span {
+.card-signals span,
+.brief-summary span {
   background: var(--soft);
   color: var(--muted);
 }
@@ -369,6 +375,27 @@ h1 {
   padding-left: 18px;
   color: #334155;
   font-size: 0.86rem;
+}
+
+.agent-guidance {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--role) 26%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--role) 8%, white);
+  padding: 10px;
+}
+
+.agent-guidance span {
+  justify-self: start;
+  background: #ffffff;
+  color: var(--role);
+}
+
+.agent-guidance strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
 }
 
 .gate-list,
@@ -396,6 +423,33 @@ h1 {
   color: var(--red);
   font-size: 0.82rem;
   font-weight: 720;
+}
+
+.brief-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.brief-blockers span {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.brief-panel pre {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  border-radius: 6px;
+  background: #101827;
+  color: #e5eefb;
+  font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  padding: 10px;
 }
 
 .card-actions {

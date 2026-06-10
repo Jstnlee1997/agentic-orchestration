@@ -1,8 +1,8 @@
 # Agent Symphony Board
 
-Agent Symphony Board is a local-first orchestration product for coordinating AI agents, human approvals, task dependencies, verification gates, retries, handoffs, and artifacts.
+Agent Symphony Board is a local-first agent control plane for coordinating AI agents, human approvals, task dependencies, verification gates, retries, handoffs, and artifacts.
 
-It turns a high-level goal into a live orchestration board. Instead of treating work as a linear checklist, the board behaves like a small command center: planners, researchers, implementers, reviewers, verifiers, documenters, and operators each own workstreams that can move in parallel, wait on dependencies, ask for approval, attach evidence, retry, fail, recover, and leave a durable event trail.
+It turns a high-level goal into a live orchestration board that also produces agent-ready execution briefs. Instead of treating work as a linear checklist, the board behaves like a small command center: planners, researchers, implementers, reviewers, verifiers, documenters, and operators each own workstreams that can move in parallel, wait on dependencies, ask for approval, attach evidence, retry, fail, recover, and leave a durable event trail.
 
 Memorable interaction model: **the Conductor listens for silence**. A work item is not done when someone says it is done. It is done when dependencies, gates, approvals, and evidence stop making noise.
 
@@ -47,6 +47,10 @@ The first product slice is a dependency-free local simulator and framework:
 - Agent lanes grouped by role.
 - A dependency view showing work graph edges.
 - A compact event feed.
+- A generic Skill/Capability model for agent execution guidance.
+- `getNextAction(...)` recommendations for what should happen next.
+- `getAgentBrief(...)` copy-paste briefs for the next AI agent or human operator.
+- Policy-enforced transitions, including approval-before-execution.
 - Scenario templates for feature shipping, landing pages, production bugs, and research reports.
 - A small domain engine that can later sit behind real agent runners, LLM calls, CI checks, GitHub issues, or chat approvals.
 
@@ -124,6 +128,24 @@ Roles are stable responsibilities, not specific vendors or models:
 - `documenter`: prepares summaries, release notes, and handoff docs.
 - `operator`: handles approvals, release decisions, incidents, and recovery.
 
+### Skill / Capability
+
+Skills are generic execution capabilities. They are intentionally not tied to a company, plugin, model, or vendor.
+
+Built-in skills:
+
+- `requirement-clarification`
+- `research-context`
+- `planning`
+- `implementation`
+- `testing`
+- `review`
+- `verification`
+- `documentation`
+- `release-decision`
+
+Work items can declare `requiredSkills` or `recommendedSkills`. If neither is present, the engine infers a skill from the owner role and current state.
+
 ### WorkItem
 
 A work item is a coordinated unit of work:
@@ -135,6 +157,7 @@ A work item is a coordinated unit of work:
   ownerRole: "verifier",
   state: "waiting_dependency",
   dependencies: ["implement"],
+  requiredSkills: ["verification", "testing"],
   acceptanceCriteria: ["Test output exists", "Manual QA notes exist"],
   gates: [
     { id: "verify-tests", type: "test_pass", label: "Focused tests", status: "open" }
@@ -169,6 +192,42 @@ Gates decide whether work can advance:
 
 A done claim is rejected when required gates are still open.
 
+### Next Action
+
+`getNextAction(orchestration, workItemId)` turns board state into operating guidance:
+
+- Recommended action.
+- Recommended role.
+- Recommended skill.
+- Blockers.
+- Required evidence.
+- Allowed transitions.
+- Short instruction text for the next agent.
+
+This is the product hinge between "task board" and "agent control plane." A work item can always answer: what state am I in, who should handle me, what capability should they use, what should they read, what evidence is missing, and which transitions are currently allowed.
+
+### Agent Brief
+
+`getAgentBrief(orchestration, workItemId)` returns a copy-pasteable brief for an AI agent session.
+
+Each brief includes:
+
+- Mission title.
+- Work item title.
+- Current state.
+- Recommended role and skill.
+- Dependencies and their states.
+- Gates and gate status.
+- Artifacts to inspect.
+- Acceptance criteria.
+- Next action.
+- Blockers.
+- Required evidence.
+- Allowed transitions.
+- Completion rules.
+
+Every work card has a **Brief** action that opens this generated handoff panel.
+
 ### Artifact
 
 Artifacts are evidence and durable outputs:
@@ -193,7 +252,7 @@ Policy turns preferences into guardrails:
 - Approval required before execution.
 - Verification required before done.
 
-The current simulator enforces retry budget and done-gate checks. Future adapters can enforce stronger policy before agent execution.
+The current simulator enforces retry budget, done-gate checks, verification evidence, and approval-before-execution. If `approvalRequiredBeforeExecution` is true, a work item with an open human approval gate cannot move into `in_progress`.
 
 ### EventLog
 
@@ -266,10 +325,13 @@ Responsibilities:
 - Hold orchestration state.
 - Enforce dependency release.
 - Enforce gates before done.
+- Enforce approval-before-execution.
 - Track retries and recovery failure.
 - Attach artifacts.
 - Record append-only events.
 - Record handoffs.
+- Recommend next actions.
+- Generate copy-paste agent briefs.
 
 ### 2. Scenario and Decomposition Layer
 
@@ -292,6 +354,7 @@ Responsibilities:
 - Render role lanes.
 - Render dependencies.
 - Render event log.
+- Render Agent Brief panels on work cards.
 - Provide local simulator actions.
 
 ### 4. Future Agent Runner Layer
@@ -316,7 +379,8 @@ This first version was implemented in small steps:
 3. Build a local board UI with Conductor health, Kanban columns, role lanes, dependency view, and event feed.
 4. Add simulator actions for approval, start, review, verify, done, block, retry, and handoff.
 5. Add focused tests for dependency release, gate enforcement, retry policy, handoffs, and health.
-6. Rewrite this README so the product direction is clear.
+6. Add skills, next-action selection, agent brief generation, and approval-before-execution enforcement.
+7. Rewrite this README so the product direction is clear.
 
 ## Why This Is Not Just A Task Tracker
 
@@ -329,6 +393,8 @@ The difference:
 - Handoffs preserve context and expected output.
 - Retry budget is explicit.
 - Agent roles are first-class.
+- Skills make agent capability expectations explicit.
+- Agent Briefs turn board state into copy-paste execution instructions.
 - Artifacts are attached to the work graph.
 - The event log becomes mission memory.
 - The Conductor view shows orchestration health, not just task count.
@@ -348,6 +414,11 @@ Current test coverage checks:
 - Retry exhaustion into recovery failure.
 - Explicit handoff records.
 - Mission health summaries.
+- Next-action selection.
+- Skill recommendation.
+- Agent brief generation.
+- Approval-before-execution enforcement.
+- Blocked next actions when gates or evidence are missing.
 
 ## Future Roadmap
 
@@ -358,6 +429,7 @@ Current test coverage checks:
 - Evidence upload for screenshots, test logs, diffs, and docs.
 - Human approval inbox.
 - Agent execution adapters.
+- Agent Brief export and copy-to-clipboard.
 - CI adapter that can pass or fail gates automatically.
 - GitHub issue and pull request synchronization.
 - Timeline view with critical path and idle-time detection.
