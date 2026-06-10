@@ -1,350 +1,376 @@
-# Personal Composer
+# Agent Symphony Board
 
-Personal Composer is a lightweight agentic orchestration workflow for software projects. It gives an AI coding agent one durable place to keep the truth about a task: what was asked, what is known, what is assumed, what changed, how it was verified, what is blocked, and what should happen next.
+Agent Symphony Board is a local-first orchestration product for coordinating AI agents, human approvals, task dependencies, verification gates, retries, handoffs, and artifacts.
 
-It is intentionally small. It works with local files, git, tests, and links the user provides. You can connect it to issue trackers, docs, GitHub, GitLab, design tools, or chat threads, but none of those are required.
+It turns a high-level goal into a live orchestration board. Instead of treating work as a linear checklist, the board behaves like a small command center: planners, researchers, implementers, reviewers, verifiers, documenters, and operators each own workstreams that can move in parallel, wait on dependencies, ask for approval, attach evidence, retry, fail, recover, and leave a durable event trail.
 
-## Overview
+Memorable interaction model: **the Conductor listens for silence**. A work item is not done when someone says it is done. It is done when dependencies, gates, approvals, and evidence stop making noise.
 
-Most AI coding sessions fail in quiet ways: the request starts vague, assumptions drift, the plan lives only in chat, the agent forgets what happened last time, and "done" gets claimed without evidence. Personal Composer fixes that with one source-of-truth Markdown artifact per task.
+## Current Repo Critique
 
-Each task lives at:
+This repository started as **Personal Composer**, a harness-style engineering workflow built around Markdown task artifacts.
 
-```text
-docs/tasks/<task-id>-<short-name>.md
-```
+### What Was Already Useful
 
-The artifact tracks:
+- It established a durable source of truth for a task.
+- It made state evidence-based instead of vibes-based.
+- It named useful lifecycle steps: intake, spec, plan, coding, review, done, blocked.
+- It encouraged scoped implementation, verification evidence, and handoff notes.
+- The `money-saver-app/` sample showed realistic task artifacts connected to a small runnable app.
 
-- Goal, scope, and non-goals
-- Source links and user-provided context
-- Assumptions and open questions
-- Existing behavior and relevant files
-- Lifecycle state
-- Short spec, if needed
-- Small execution plans
-- Implementation notes
-- Verification evidence
-- Blockers and risks
-- Next action
+### Why It Was More Harness Than Orchestrator
 
-The workflow moves through a simple lifecycle:
+- The workflow lived mainly in prose. There was no runtime orchestration model.
+- A task was the highest-level unit. There was no mission, workstream, role, dependency graph, gate engine, or artifact registry.
+- State transitions were manual conventions rather than product behavior.
+- Parallelism was implied, not modeled.
+- Handoffs, approvals, retries, and verification gates were text sections rather than first-class objects.
+- The event history was a document log, not an append-only system timeline.
 
-```text
-intake -> spec ready -> plan ready -> coding -> code ready -> review ready -> done
-                                      \                         /
-                                       -------- blocked --------
-```
+### Missing Orchestration Primitives
 
-## Why Use This Workflow
+- `Orchestration`: top-level mission, policy, health, event log, and work graph.
+- `AgentRole`: explicit owner roles such as planner, researcher, implementer, reviewer, verifier, documenter, and operator.
+- `WorkItem`: dependency-aware unit of work with owner, state, gates, artifacts, retries, and acceptance criteria.
+- `Handoff`: explicit transfer between roles with context and expected output.
+- `Gate`: human approval, test pass, review pass, evidence required, or dependency complete.
+- `Artifact`: plans, specs, diffs, test output, screenshots, summaries, docs.
+- `Policy`: retry limits and required approvals or verification before done.
+- `EventLog`: append-only decisions, state transitions, gate changes, retries, failures, completions, and handoffs.
 
-Use Personal Composer when you want an AI agent to keep its footing across a real software task, especially one that spans multiple sessions.
+## What This Is Now
 
-It helps you:
+The first product slice is a dependency-free local simulator and framework:
 
-- Turn vague requests into scoped implementation work
-- Resume tasks without rebuilding context from memory
-- Keep assumptions visible instead of implicit
-- Prevent over-claimed progress
-- Separate plans from evidence
-- Keep unrelated refactors out of the task
-- Make verification a first-class part of "done"
-- Leave a useful handoff when the session ends
+- A Kanban-style orchestration board.
+- A Conductor health view with progress, active work, approvals, blockers, retry budget, and evidence coverage.
+- Agent lanes grouped by role.
+- A dependency view showing work graph edges.
+- A compact event feed.
+- Scenario templates for feature shipping, landing pages, production bugs, and research reports.
+- A small domain engine that can later sit behind real agent runners, LLM calls, CI checks, GitHub issues, or chat approvals.
 
-This is not a project management system. It is a small discipline for honest, repeatable coding work.
+No LLM API integration is required yet. The current app is intentionally local and understandable.
 
 ## Quick Start
 
-1. Copy `task-template.md` into your repo:
-
-   ```text
-   docs/tasks/<task-id>-<short-name>.md
-   ```
-
-2. Start the agent with:
-
-   ```text
-   /personal-composer <task-id or task description>
-   ```
-
-3. The agent resumes an existing task artifact if one exists. Otherwise, it creates one in `docs/tasks/`.
-
-4. The agent updates the artifact before and after meaningful work:
-
-   - Before implementation: goal, scope, assumptions, relevant files, plan
-   - During implementation: current plan, files changed, blockers
-   - After implementation: verification evidence, diff review, next action
-
-5. The agent ends every run with the final response template:
-
-   ```text
-   Task:
-   State:
-   Artifact path:
-   Changes made:
-   Verification run:
-   Blockers or risks:
-   Next action:
-   ```
-
-## Example Commands
-
-Create or resume from a natural-language task:
-
-```text
-/personal-composer Add keyboard shortcuts to the editor toolbar
+```bash
+npm install
+npm test
+npm start
 ```
 
-Resume a known task:
+Open:
 
 ```text
-/personal-composer task-042-editor-shortcuts
+http://localhost:4173
 ```
 
-Ask the agent to continue from the artifact:
+`npm install` does not need to download runtime dependencies today; the app uses only Node and browser-native JavaScript.
+
+## Repository Shape
 
 ```text
-/personal-composer resume docs/tasks/task-042-editor-shortcuts.md
+index.html
+server.js
+src/
+  main.js                  # Browser UI and simulator actions
+  orchestrationEngine.js   # Domain model, transitions, gates, events
+  scenarios.js             # Rich example orchestration templates
+  styles.css               # Product UI
+  assets/
+    conductor-mark.svg
+tests/
+  orchestrationEngine.test.js
+money-saver-app/           # Historical sample app and task artifacts
+agent-workflow.md          # Original harness workflow
+task-template.md           # Original task artifact template
+invocation-prompt.md       # Original prompt shape
 ```
 
-Ask for planning only:
+## Core Concepts
 
-```text
-/personal-composer plan docs/tasks/task-042-editor-shortcuts.md
-```
+### Orchestration
 
-Ask for implementation of the next ready plan:
-
-```text
-/personal-composer implement next docs/tasks/task-042-editor-shortcuts.md
-```
-
-Ask for verification and handoff:
-
-```text
-/personal-composer verify docs/tasks/task-042-editor-shortcuts.md
-```
-
-These commands are examples of invocation shape, not dependencies on a particular CLI. You can paste the prompt into any capable coding agent.
-
-## Lifecycle States
-
-| State | Meaning | Minimum Evidence |
-| --- | --- | --- |
-| `intake` | The task exists, but requirements may be vague. | Artifact exists with goal or request source. |
-| `spec ready` | The intended behavior is clear enough to plan. | Scope, non-goals, assumptions, and open questions are recorded. |
-| `plan ready` | Work is broken into small executable steps. | At least one focused plan exists with expected files and verification. |
-| `coding` | A plan is actively being implemented. | Current plan is marked in progress and touched files are noted. |
-| `code ready` | Implementation for the current plan is complete. | Changed files are listed and tests were added or the reason for not adding tests is recorded. |
-| `review ready` | Verification ran and the diff was reviewed. | Verification commands and diff review notes are recorded. |
-| `done` | The requested task is complete. | Acceptance evidence exists, blockers are resolved or accepted, and next action says no further action. |
-| `blocked` | Progress cannot honestly continue. | Blocker includes cause, attempted resolution, owner or needed input, and next action. |
-
-State is descriptive, not aspirational. If evidence does not support the current state, normalize the task down to the highest supported state.
-
-## Task Artifact Format
-
-The task artifact is the contract for the work. Keep it short enough to maintain, but complete enough that another session can resume without guessing.
-
-Recommended sections:
-
-- Metadata
-- Goal
-- Scope
-- Non-goals
-- Source links
-- Current state
-- Assumptions
-- Open questions
-- Blockers
-- Existing behavior and relevant files
-- Short spec
-- Execution plans
-- Implementation log
-- Verification evidence
-- Diff review
-- Final handoff
-- Next action
-
-Use checkboxes sparingly. The artifact should stay readable, not become a second codebase.
-
-## Folder Structure
-
-Suggested layout:
-
-```text
-docs/
-  tasks/
-    task-042-editor-shortcuts.md
-    task-043-settings-import.md
-```
-
-Optional supporting files:
-
-```text
-docs/
-  agent-workflow.md
-  tasks/
-    task-template.md
-```
-
-The only required file for a task is its task artifact.
-
-## Resume Flow
-
-When invoked, the agent should:
-
-1. Locate an existing task artifact by path, task id, branch name, or nearby task description.
-2. If no artifact exists, create one from the template.
-3. Read repo instructions before editing, such as `README`, `CONTRIBUTING`, agent instruction files, or local style docs.
-4. Read the current task artifact completely.
-5. Inspect the working tree and relevant code before proposing changes.
-6. Check whether the recorded state is supported by evidence.
-7. Normalize over-claimed state down when needed.
-8. Continue from the recorded next action.
-
-Example normalization:
-
-```text
-Recorded state: review ready
-Evidence found: code changed, but no verification command recorded
-Normalized state: code ready
-Reason: review readiness requires verification evidence
-```
-
-This is the heart of the workflow: state follows evidence.
-
-## Verification and Evidence Rules
-
-The agent may not advance state unless the artifact contains the required evidence.
-
-Rules:
-
-- Do not claim implementation is complete without listing changed files.
-- Do not claim tests were added unless the test files are named.
-- Do not claim verification passed unless command, scope, and result are recorded.
-- If verification was not run, record why and set the state no higher than `code ready`.
-- Run the narrowest useful verification first.
-- Run broader checks when the changed surface is shared, risky, or user-facing.
-- Treat failed verification as evidence, not embarrassment. Record it and either fix the issue or mark the task blocked.
-- Review the diff before finalizing. Record whether the diff stayed in scope.
-
-Good evidence:
-
-```text
-- 2026-06-10: `npm test -- editor-shortcuts.test.ts` passed.
-- 2026-06-10: `npm run lint -- src/editor/Toolbar.tsx` passed.
-- 2026-06-10: Reviewed `git diff -- src/editor src/editor/__tests__`; no unrelated refactors found.
-```
-
-Weak evidence:
-
-```text
-- Looks good.
-- Should work.
-- Tests probably pass.
-```
-
-Weak evidence does not advance the lifecycle.
-
-## Blocker Handling
-
-Use `blocked` when the agent cannot honestly continue without user input, missing context, failing external dependencies, or an unresolved technical obstacle.
-
-A blocker must include:
-
-- What is blocked
-- Why it is blocked
-- What was tried
-- Who or what can unblock it
-- The next concrete action
+The top-level mission. It owns policy, work items, artifacts, handoffs, and the event log.
 
 Example:
 
-```text
-### Blockers
-
-- 2026-06-10: Cannot verify OAuth callback behavior locally because required test credentials are unavailable.
-  - Tried: inspected existing auth tests, ran unit tests for callback parser.
-  - Needed: user-provided sandbox credentials or approval to mock the provider boundary.
-  - Next action: wait for credentials or update scope to unit-test parser only.
+```js
+{
+  id: "ship-feature",
+  title: "Ship a small feature with reviewer and verifier agents",
+  policy: {
+    maxRetries: 2,
+    approvalRequiredBeforeExecution: true,
+    verificationRequiredBeforeDone: true
+  },
+  workItems: [],
+  artifacts: [],
+  handoffs: [],
+  eventLog: []
+}
 ```
 
-If evidence is missing, record a blocker or lower the state. Do not fill the gap with confidence.
+### AgentRole
 
-## Example End-to-End Run
+Roles are stable responsibilities, not specific vendors or models:
 
-User:
+- `planner`: turns goals into work structure.
+- `researcher`: gathers context and constraints.
+- `implementer`: changes code, content, or configuration.
+- `reviewer`: checks quality, scope, and regressions.
+- `verifier`: runs tests, captures evidence, and validates acceptance criteria.
+- `documenter`: prepares summaries, release notes, and handoff docs.
+- `operator`: handles approvals, release decisions, incidents, and recovery.
 
-```text
-/personal-composer Add keyboard shortcuts to the editor toolbar
+### WorkItem
+
+A work item is a coordinated unit of work:
+
+```js
+{
+  id: "verify",
+  title: "Verify behavior and evidence",
+  ownerRole: "verifier",
+  state: "waiting_dependency",
+  dependencies: ["implement"],
+  acceptanceCriteria: ["Test output exists", "Manual QA notes exist"],
+  gates: [
+    { id: "verify-tests", type: "test_pass", label: "Focused tests", status: "open" }
+  ],
+  artifacts: [],
+  retryCount: 0
+}
 ```
 
-Agent:
+### Handoff
 
-1. Creates `docs/tasks/task-042-editor-shortcuts.md`.
-2. Records the goal: add keyboard shortcuts for bold, italic, save, undo, and redo.
-3. Reads repo instructions and inspects editor toolbar components.
-4. Records relevant files:
+A handoff is not just assignment reassignment. It records:
 
-   ```text
-   - src/editor/Toolbar.tsx
-   - src/editor/useEditorCommands.ts
-   - src/editor/__tests__/Toolbar.test.tsx
-   ```
+- From role.
+- To role.
+- Work item.
+- Context.
+- Expected output.
+- Event log entry.
 
-5. Asks one clarifying question only if shortcut behavior is ambiguous.
-6. Writes a short spec:
+This makes transfer explicit enough for real agents or humans to resume without reconstructing the conversation.
 
-   ```text
-   Ctrl/Cmd+B toggles bold when editor focus is active.
-   Ctrl/Cmd+S triggers save and prevents browser save.
-   Shortcuts do not fire while focus is inside modal text fields.
-   ```
+### Gate
 
-7. Creates a small plan:
+Gates decide whether work can advance:
 
-   ```text
-   Plan A: add command map and unit tests.
-   Plan B: wire toolbar shortcuts and run focused editor tests.
-   ```
+- `human_approval`
+- `test_pass`
+- `review_pass`
+- `evidence_required`
+- `dependency_complete`
 
-8. Adds or updates focused tests.
-9. Implements Plan A, then Plan B.
-10. Runs focused tests first, then broader checks if needed.
-11. Reviews the diff for scope.
-12. Ends with:
+A done claim is rejected when required gates are still open.
 
-   ```text
-   Task: task-042-editor-shortcuts
-   State: review ready
-   Artifact path: docs/tasks/task-042-editor-shortcuts.md
-   Changes made: Added editor shortcut command map, toolbar wiring, and focused tests.
-   Verification run: `npm test -- Toolbar.test.tsx` passed.
-   Blockers or risks: Browser-level shortcut behavior still needs manual QA in Safari.
-   Next action: Perform manual browser QA or accept current automated coverage.
-   ```
+### Artifact
 
-## Customization Guide
+Artifacts are evidence and durable outputs:
 
-Keep the core small and tune only what helps you.
+- Plans
+- Specs
+- Diffs
+- Test output
+- Review notes
+- Screenshots
+- Summaries
+- Release notes
+- Incident notes
 
-Good customizations:
+The board tracks evidence coverage so the mission can expose work that looks complete but has no proof.
 
-- Add project-specific state gates, such as accessibility checks for UI work.
-- Add preferred verification commands for your stack.
-- Add optional links to issues, pull requests, design files, or docs.
-- Add a "Manual QA" section for product work.
-- Add a "Rollback plan" section for infrastructure or migration work.
-- Add naming conventions for task ids.
+### Policy
 
-Avoid:
+Policy turns preferences into guardrails:
 
-- Requiring a specific issue tracker.
-- Adding hidden lifecycle states that are not visible in the artifact.
-- Letting chat history become the source of truth.
-- Expanding the template until agents stop maintaining it.
-- Treating unchecked plans as proof of completion.
+- Max retries before recovery failure.
+- Approval required before execution.
+- Verification required before done.
 
-The best version of this workflow is the one you will actually keep current.
+The current simulator enforces retry budget and done-gate checks. Future adapters can enforce stronger policy before agent execution.
 
+### EventLog
+
+The event log is append-only mission memory:
+
+- Mission created.
+- Work transitioned.
+- Dependencies released.
+- Gate passed or blocked.
+- Artifact attached.
+- Approval requested.
+- Handoff created.
+- Retry used.
+- Recovery failure reached.
+
+## Board and State Model
+
+The lifecycle supports parallel work:
+
+| State | Meaning |
+| --- | --- |
+| `intake` | Mission or work is captured but not shaped. |
+| `decomposition` | Goal is being broken into workstreams. |
+| `assignment` | Ownership and dependencies are being set. |
+| `ready` | Dependencies are satisfied and work can start. |
+| `in_progress` | An agent or human is actively working. |
+| `waiting_dependency` | The work is blocked by upstream work. |
+| `needs_review` | Output exists and needs reviewer judgment. |
+| `needs_human_approval` | A human decision is required. |
+| `verifying` | Evidence, tests, or acceptance checks are being gathered. |
+| `done` | Required gates and evidence are satisfied. |
+| `blocked` | Progress needs a decision, dependency, or recovery action. |
+| `failed_recovery` | Retry policy is exhausted and recovery is needed. |
+
+Dependency release is automatic. When an upstream item reaches `done`, dependent work moves from `waiting_dependency` to `ready`.
+
+## Example Orchestration
+
+The default scenario is **Ship a small feature with reviewer and verifier agents**.
+
+It decomposes into:
+
+1. Planner frames the feature contract and waits for human scope approval.
+2. Researcher inspects existing behavior.
+3. Planner decomposes implementation beats after scope and research are complete.
+4. Implementer builds the product slice and must attach diff evidence.
+5. Reviewer checks regressions and must pass a review gate.
+6. Verifier attaches test output and evidence.
+7. Documenter prepares operator handoff.
+8. Operator records the release decision behind a human approval gate.
+
+Other built-in scenarios:
+
+- **Build a landing page**: audience brief, visual references, wireframe, responsive build, copy review, visual QA.
+- **Investigate a production bug**: triage, logs, hypothesis, patch, regression test, incident review.
+- **Prepare a research report**: question framing, source gathering, synthesis, report draft, confidence review.
+
+Use **Simulate Next Beat** to watch the mission advance through approvals, parallel-ready work, review, verification, dependency release, and done checks.
+
+## Proposed Architecture
+
+The product should evolve in layers:
+
+### 1. Domain Engine
+
+File: `src/orchestrationEngine.js`
+
+Responsibilities:
+
+- Hold orchestration state.
+- Enforce dependency release.
+- Enforce gates before done.
+- Track retries and recovery failure.
+- Attach artifacts.
+- Record append-only events.
+- Record handoffs.
+
+### 2. Scenario and Decomposition Layer
+
+File: `src/scenarios.js`
+
+Responsibilities:
+
+- Provide local templates for common mission types.
+- Make decomposition understandable before adding real LLM calls.
+- Later: swap template selection for model-assisted planning with human approval.
+
+### 3. Product UI
+
+File: `src/main.js`
+
+Responsibilities:
+
+- Render board columns.
+- Render Conductor health.
+- Render role lanes.
+- Render dependencies.
+- Render event log.
+- Provide local simulator actions.
+
+### 4. Future Agent Runner Layer
+
+Not implemented yet.
+
+Possible adapters:
+
+- LLM agent runner.
+- GitHub issue or PR adapter.
+- CI/test adapter.
+- Browser QA adapter.
+- Slack or email approval adapter.
+- Artifact storage adapter.
+
+## Implementation Plan
+
+This first version was implemented in small steps:
+
+1. Add a runtime orchestration model with roles, states, gates, artifacts, handoffs, policy, dependency release, retries, and event log.
+2. Add rich example scenarios that feel like real coordinated missions.
+3. Build a local board UI with Conductor health, Kanban columns, role lanes, dependency view, and event feed.
+4. Add simulator actions for approval, start, review, verify, done, block, retry, and handoff.
+5. Add focused tests for dependency release, gate enforcement, retry policy, handoffs, and health.
+6. Rewrite this README so the product direction is clear.
+
+## Why This Is Not Just A Task Tracker
+
+A task tracker records work. Agent Symphony Board coordinates work.
+
+The difference:
+
+- Dependencies are executable, not just labels.
+- Done requires gates and evidence, not only a status change.
+- Handoffs preserve context and expected output.
+- Retry budget is explicit.
+- Agent roles are first-class.
+- Artifacts are attached to the work graph.
+- The event log becomes mission memory.
+- The Conductor view shows orchestration health, not just task count.
+
+## Verification
+
+Run:
+
+```bash
+npm test
+```
+
+Current test coverage checks:
+
+- Dependency release.
+- Gate enforcement before done.
+- Retry exhaustion into recovery failure.
+- Explicit handoff records.
+- Mission health summaries.
+
+## Future Roadmap
+
+- Drag-and-drop board transitions.
+- Real decomposition assistant with approval before execution.
+- Persistent mission storage.
+- Import existing Markdown task artifacts into work items.
+- Evidence upload for screenshots, test logs, diffs, and docs.
+- Human approval inbox.
+- Agent execution adapters.
+- CI adapter that can pass or fail gates automatically.
+- GitHub issue and pull request synchronization.
+- Timeline view with critical path and idle-time detection.
+- Policy editor for different mission types.
+- Multi-mission dashboard.
+
+## Historical Workflow
+
+The original Personal Composer files remain in the repo:
+
+- `agent-workflow.md`
+- `task-template.md`
+- `invocation-prompt.md`
+- `money-saver-app/docs/tasks/`
+
+Those files are still useful as source material. The product direction is now to lift their best discipline into a real orchestration surface.
